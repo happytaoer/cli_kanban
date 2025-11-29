@@ -1,0 +1,250 @@
+package tui
+
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/happytaoer/cli_kanban/internal/model"
+)
+
+// Update handles messages and updates the model
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
+
+	case tasksLoadedMsg:
+		m.organizeTasks(msg.tasks)
+		return m, nil
+
+	case taskCreatedMsg:
+		return m, m.loadTasks()
+
+	case taskUpdatedMsg:
+		return m, m.loadTasks()
+
+	case taskDeletedMsg:
+		return m, m.loadTasks()
+
+	case errMsg:
+		m.err = msg.err
+		return m, nil
+
+	case tea.KeyMsg:
+		return m.handleKeyPress(msg)
+	}
+
+	// Handle text input updates
+	if m.viewMode == ViewModeAddTask || m.viewMode == ViewModeEditTask {
+		m.textInput, cmd = m.textInput.Update(msg)
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+// handleKeyPress handles keyboard input
+func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Global keys
+	switch msg.String() {
+	case "ctrl+c", "q":
+		if m.viewMode == ViewModeBoard {
+			return m, tea.Quit
+		}
+	case "esc":
+		if m.viewMode != ViewModeBoard {
+			m.viewMode = ViewModeBoard
+			m.textInput.SetValue("")
+			return m, nil
+		}
+		return m, tea.Quit
+	}
+
+	// Mode-specific keys
+	switch m.viewMode {
+	case ViewModeBoard:
+		return m.handleBoardKeys(msg)
+	case ViewModeAddTask:
+		return m.handleAddTaskKeys(msg)
+	case ViewModeEditTask:
+		return m.handleEditTaskKeys(msg)
+	case ViewModeHelp:
+		return m.handleHelpKeys(msg)
+	}
+
+	return m, nil
+}
+
+// handleBoardKeys handles keyboard input in board view mode
+func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "left", "h":
+		if m.currentColumn > 0 {
+			m.currentColumn--
+			m.currentTask = 0
+		}
+		return m, nil
+
+	case "right", "l":
+		if m.currentColumn < len(m.columns)-1 {
+			m.currentColumn++
+			m.currentTask = 0
+		}
+		return m, nil
+
+	case "up", "k":
+		if m.currentTask > 0 {
+			m.currentTask--
+		}
+		return m, nil
+
+	case "down", "j":
+		col := m.columns[m.currentColumn]
+		if m.currentTask < len(col.Tasks)-1 {
+			m.currentTask++
+		}
+		return m, nil
+
+	case "a":
+		m.viewMode = ViewModeAddTask
+		m.textInput.SetValue("")
+		m.textInput.Focus()
+		return m, nil
+
+	case "e", "enter":
+		task := m.getCurrentTask()
+		if task != nil {
+			m.viewMode = ViewModeEditTask
+			m.textInput.SetValue(task.Title)
+			m.textInput.Focus()
+		}
+		return m, nil
+
+	case "d", "delete":
+		task := m.getCurrentTask()
+		if task != nil {
+			return m, m.deleteTask(task.ID)
+		}
+		return m, nil
+
+	case "m":
+		task := m.getCurrentTask()
+		if task != nil {
+			return m, m.moveTask(task)
+		}
+		return m, nil
+
+	case "?":
+		m.viewMode = ViewModeHelp
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// handleAddTaskKeys handles keyboard input in add task mode
+func (m Model) handleAddTaskKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		title := m.textInput.Value()
+		if title != "" {
+			status := m.columns[m.currentColumn].Status
+			m.viewMode = ViewModeBoard
+			m.textInput.SetValue("")
+			return m, m.createTask(title, status)
+		}
+		return m, nil
+
+	case "esc":
+		m.viewMode = ViewModeBoard
+		m.textInput.SetValue("")
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
+}
+
+// handleEditTaskKeys handles keyboard input in edit task mode
+func (m Model) handleEditTaskKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		title := m.textInput.Value()
+		task := m.getCurrentTask()
+		if title != "" && task != nil {
+			m.viewMode = ViewModeBoard
+			m.textInput.SetValue("")
+			return m, m.updateTask(task.ID, title, task.Status)
+		}
+		return m, nil
+
+	case "esc":
+		m.viewMode = ViewModeBoard
+		m.textInput.SetValue("")
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
+}
+
+// handleHelpKeys handles keyboard input in help mode
+func (m Model) handleHelpKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.viewMode = ViewModeBoard
+	return m, nil
+}
+
+// createTask creates a new task
+func (m Model) createTask(title string, status model.TaskStatus) tea.Cmd {
+	return func() tea.Msg {
+		task, err := m.db.CreateTask(title, status)
+		if err != nil {
+			return errMsg{err}
+		}
+		return taskCreatedMsg{task}
+	}
+}
+
+// updateTask updates a task
+func (m Model) updateTask(id int64, title string, status model.TaskStatus) tea.Cmd {
+	return func() tea.Msg {
+		err := m.db.UpdateTask(id, title, status)
+		if err != nil {
+			return errMsg{err}
+		}
+		return taskUpdatedMsg{}
+	}
+}
+
+// deleteTask deletes a task
+func (m Model) deleteTask(id int64) tea.Cmd {
+	return func() tea.Msg {
+		err := m.db.DeleteTask(id)
+		if err != nil {
+			return errMsg{err}
+		}
+		return taskDeletedMsg{}
+	}
+}
+
+// moveTask moves a task to the next column
+func (m Model) moveTask(task *model.Task) tea.Cmd {
+	var newStatus model.TaskStatus
+	if m.currentColumn < len(m.columns)-1 {
+		newStatus = m.columns[m.currentColumn+1].Status
+	} else {
+		newStatus = task.Status
+	}
+
+	return func() tea.Msg {
+		err := m.db.UpdateTaskStatus(task.ID, newStatus)
+		if err != nil {
+			return errMsg{err}
+		}
+		return taskUpdatedMsg{}
+	}
+}
