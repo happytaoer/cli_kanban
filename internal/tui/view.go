@@ -10,13 +10,13 @@ import (
 
 var (
 	// Colors
-	colorPrimary   = lipgloss.Color("#7C3AED")
-	colorSecondary = lipgloss.Color("#A78BFA")
-	colorSuccess   = lipgloss.Color("#10B981")
-	colorWarning   = lipgloss.Color("#F59E0B")
-	colorDanger    = lipgloss.Color("#EF4444")
-	colorMuted     = lipgloss.Color("#6B7280")
-	colorBorder    = lipgloss.Color("#374151")
+	colorPrimary    = lipgloss.Color("#7C3AED")
+	colorSecondary  = lipgloss.Color("#A78BFA")
+	colorInProgress = lipgloss.Color("#3B82F6")
+	colorSuccess    = lipgloss.Color("#10B981")
+	colorDanger     = lipgloss.Color("#EF4444")
+	colorMuted      = lipgloss.Color("#6B7280")
+	colorBorder     = lipgloss.Color("#374151")
 
 	// Styles
 	titleStyle = lipgloss.NewStyle().
@@ -29,12 +29,6 @@ var (
 			BorderForeground(colorBorder).
 			Padding(1, 2).
 			Width(30)
-
-	columnActiveStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(colorPrimary).
-				Padding(1, 2).
-				Width(30)
 
 	columnTitleStyle = lipgloss.NewStyle().
 				Bold(true).
@@ -167,12 +161,21 @@ func (m Model) renderColumn(index int, col model.Column) string {
 		}
 	}
 
-	// Apply column style
+	// Apply column style with status-specific colors
 	content := b.String()
-	if index == m.currentColumn {
-		return columnActiveStyle.Render(content)
+	style := columnStyle.Copy()
+	switch col.Status {
+	case model.StatusInProgress:
+		style = style.BorderForeground(colorInProgress)
+	case model.StatusDone:
+		style = style.BorderForeground(colorSuccess)
+	default:
+		style = style.BorderForeground(colorPrimary)
 	}
-	return columnStyle.Render(content)
+	if index == m.currentColumn {
+		style = style.Copy().Bold(true)
+	}
+	return style.Render(content)
 }
 
 // renderTask renders a single task
