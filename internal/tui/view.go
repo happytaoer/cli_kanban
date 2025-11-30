@@ -133,6 +133,9 @@ func (m Model) renderStats() string {
 		parts = append(parts, fmt.Sprintf("%s: %d", col.Name, count))
 	}
 	statsText := strings.Join(parts, " | ")
+	if !m.currentTime.IsZero() {
+		statsText = fmt.Sprintf("%s | 🕒 %s", statsText, m.currentTime.Format("2006-01-02 15:04:05"))
+	}
 	return statsStyle.Render(statsText)
 }
 

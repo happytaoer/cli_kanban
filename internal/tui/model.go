@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,11 +29,19 @@ type Model struct {
 	currentTask   int
 	scrollOffsets []int // scroll offset per column
 	viewMode      ViewMode
+	currentTime   time.Time
 	textInput     textinput.Model
 	textArea      textarea.Model
 	width         int
 	height        int
 	err           error
+}
+
+// clockTickCmd creates a command that emits time ticks every second
+func clockTickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return clockTickMsg(t)
+	})
 }
 
 // NewModel creates a new TUI model
@@ -54,6 +64,7 @@ func NewModel(database *db.DB) Model {
 		currentColumn: 0,
 		currentTask:   0,
 		scrollOffsets: make([]int, 3), // one per column
+		currentTime:   time.Now(),
 		viewMode:      ViewModeBoard,
 		textInput:     ti,
 		textArea:      ta,
@@ -62,7 +73,7 @@ func NewModel(database *db.DB) Model {
 
 // Init initializes the model
 func (m Model) Init() tea.Cmd {
-	return m.loadTasks()
+	return tea.Batch(m.loadTasks(), clockTickCmd())
 }
 
 // loadTasks loads all tasks from the database
@@ -90,6 +101,8 @@ type taskUpdatedMsg struct{}
 type taskDeletedMsg struct{}
 
 type descriptionUpdatedMsg struct{}
+
+type clockTickMsg time.Time
 
 type errMsg struct {
 	err error

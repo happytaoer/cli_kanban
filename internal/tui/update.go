@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/happytaoer/cli_kanban/internal/model"
 )
@@ -14,6 +16,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		return m, nil
+
+	case clockTickMsg:
+		m.currentTime = time.Time(msg)
+		return m, clockTickCmd()
 
 	case tasksLoadedMsg:
 		m.organizeTasks(msg.tasks)
