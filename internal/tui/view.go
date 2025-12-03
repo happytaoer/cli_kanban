@@ -93,17 +93,17 @@ func (m Model) View() string {
 
 // viewBoard renders the kanban board
 func (m Model) viewBoard() string {
-	var b strings.Builder
+	var body strings.Builder
 
 	// Title
 	title := titleStyle.Render("📋 Kanban Board")
-	b.WriteString(title)
-	b.WriteString("\n")
+	body.WriteString(title)
+	body.WriteString("\n")
 
 	// Statistics
 	stats := m.renderStats()
-	b.WriteString(stats)
-	b.WriteString("\n\n")
+	body.WriteString(stats)
+	body.WriteString("\n\n")
 
 	// Columns
 	columns := make([]string, len(m.columns))
@@ -112,8 +112,8 @@ func (m Model) viewBoard() string {
 	}
 
 	columnsView := lipgloss.JoinHorizontal(lipgloss.Top, columns...)
-	b.WriteString(columnsView)
-	b.WriteString("\n\n")
+	body.WriteString(columnsView)
+	body.WriteString("\n\n")
 
 	// Footer with help text (fixed at bottom)
 	helpText := "← → / h l: Navigate columns | ↑ ↓ / j k: Navigate tasks | a: Add | e: Edit | i: Description | d: Delete | m: Move | ?: Help | q: Quit"
@@ -123,15 +123,30 @@ func (m Model) viewBoard() string {
 	}
 	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, helpText)
 	footer := footerStyle.Width(helpWidth).Render(helpContent)
-	b.WriteString(footer)
+
+	bodyStr := body.String()
 
 	// Error message
 	if m.err != nil {
-		b.WriteString("\n\n")
-		b.WriteString(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
+		bodyStr += "\n\n" + errorStyle.Render(fmt.Sprintf("Error: %v", m.err)) + "\n"
 	}
 
-	return b.String()
+	footerStr := footer
+
+	if m.height > 0 {
+		contentHeight := lipgloss.Height(bodyStr)
+		helpHeight := lipgloss.Height(footerStr)
+		available := m.height - helpHeight
+		if available < 0 {
+			available = 0
+		}
+		if available > contentHeight {
+			padLines := available - contentHeight
+			bodyStr += strings.Repeat("\n", padLines)
+		}
+	}
+
+	return bodyStr + footerStr
 }
 
 // renderStats renders the statistics bar
