@@ -154,7 +154,10 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "m":
 		task := m.getCurrentTask()
 		if task != nil {
-			return m, m.moveTask(task)
+			nextColumn := (m.currentColumn + 1) % len(m.columns)
+			m.currentColumn = nextColumn
+			m.followTaskID = task.ID
+			return m, m.moveTask(task, nextColumn)
 		}
 		return m, nil
 
@@ -315,14 +318,9 @@ func (m Model) updateDescription(id int64, description string) tea.Cmd {
 	}
 }
 
-// moveTask moves a task to the next column
-func (m Model) moveTask(task *model.Task) tea.Cmd {
-	var newStatus model.TaskStatus
-	if m.currentColumn < len(m.columns)-1 {
-		newStatus = m.columns[m.currentColumn+1].Status
-	} else {
-		newStatus = task.Status
-	}
+// moveTask moves a task to the target column
+func (m Model) moveTask(task *model.Task, targetColumn int) tea.Cmd {
+	newStatus := m.columns[targetColumn].Status
 
 	return func() tea.Msg {
 		err := m.db.UpdateTaskStatus(task.ID, newStatus)

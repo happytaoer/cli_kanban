@@ -32,6 +32,7 @@ type Model struct {
 	viewMode        ViewMode
 	currentTime     time.Time
 	pendingDeleteID int64 // task ID pending deletion confirmation
+	followTaskID    int64 // task ID to follow after reload
 	textInput       textinput.Model
 	textArea        textarea.Model
 	width           int
@@ -151,6 +152,23 @@ func (m *Model) organizeTasks(tasks []model.Task) {
 				m.columns[i].Tasks = append(m.columns[i].Tasks, task)
 				break
 			}
+		}
+	}
+
+	// If we're following a task after move, find its position
+	if m.followTaskID != 0 {
+		found := false
+		for i, task := range m.columns[m.currentColumn].Tasks {
+			if task.ID == m.followTaskID {
+				m.currentTask = i
+				found = true
+				break
+			}
+		}
+		m.followTaskID = 0 // Clear after finding
+		if found {
+			m.ensureTaskVisible()
+			return
 		}
 	}
 
