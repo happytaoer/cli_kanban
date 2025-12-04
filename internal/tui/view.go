@@ -170,7 +170,16 @@ func (m Model) renderColumn(index int, col model.Column) string {
 	// Column title with scroll indicator
 	totalTasks := len(col.Tasks)
 	offset := m.scrollOffsets[index]
-	title := columnTitleStyle.Render(col.Name)
+	titleStyle := columnTitleStyle
+	switch col.Status {
+	case model.StatusInProgress:
+		titleStyle = titleStyle.Copy().Foreground(colorInProgress)
+	case model.StatusDone:
+		titleStyle = titleStyle.Copy().Foreground(colorSuccess)
+	default:
+		titleStyle = titleStyle.Copy().Foreground(colorMuted)
+	}
+	title := titleStyle.Render(col.Name)
 	b.WriteString(title)
 	b.WriteString("\n")
 
@@ -217,7 +226,7 @@ func (m Model) renderColumn(index int, col model.Column) string {
 	case model.StatusDone:
 		style = style.BorderForeground(colorSuccess)
 	default:
-		style = style.BorderForeground(colorPrimary)
+		style = style.BorderForeground(colorMuted)
 	}
 	if index == m.currentColumn {
 		style = style.Copy().Bold(true)
