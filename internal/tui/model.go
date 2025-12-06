@@ -22,6 +22,7 @@ const (
 	ViewModeEditTags
 	ViewModeConfirmDelete
 	ViewModeHelp
+	ViewModeSearch
 )
 
 // Model is the main TUI model
@@ -37,6 +38,8 @@ type Model struct {
 	followTaskID    int64 // task ID to follow after reload
 	textInput       textinput.Model
 	textArea        textarea.Model
+	searchInput     textinput.Model
+	searchQuery     string // active search filter
 	viewport        viewport.Model
 	width           int
 	height          int
@@ -65,6 +68,11 @@ func NewModel(database *db.DB) Model {
 	ta.SetHeight(10)
 	ta.CharLimit = 2000
 
+	si := textinput.New()
+	si.Placeholder = "Search tasks..."
+	si.CharLimit = 100
+	si.Width = 30
+
 	return Model{
 		db:            database,
 		columns:       model.GetAllColumns(),
@@ -75,6 +83,7 @@ func NewModel(database *db.DB) Model {
 		viewMode:      ViewModeBoard,
 		textInput:     ti,
 		textArea:      ta,
+		searchInput:   si,
 	}
 }
 

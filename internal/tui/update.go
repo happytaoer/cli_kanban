@@ -79,6 +79,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	// Handle search input updates
+	if m.viewMode == ViewModeSearch {
+		m.searchInput, cmd = m.searchInput.Update(msg)
+		return m, cmd
+	}
+
 	return m, nil
 }
 
@@ -94,6 +100,12 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.viewMode != ViewModeBoard {
 			m.viewMode = ViewModeBoard
 			m.textInput.SetValue("")
+			return m, nil
+		}
+		// If in board mode with active search, clear search first
+		if m.searchQuery != "" {
+			m.searchQuery = ""
+			m.searchInput.SetValue("")
 			return m, nil
 		}
 		return m, tea.Quit
@@ -115,6 +127,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleConfirmDeleteKeys(msg)
 	case ViewModeHelp:
 		return m.handleHelpKeys(msg)
+	case ViewModeSearch:
+		return m.handleSearchKeys(msg)
 	}
 
 	return m, nil
@@ -206,9 +220,36 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "?":
 		m.viewMode = ViewModeHelp
 		return m, nil
+
+	case "/":
+		m.viewMode = ViewModeSearch
+		m.searchInput.SetValue(m.searchQuery)
+		m.searchInput.Focus()
+		return m, nil
 	}
 
 	return m, nil
+}
+
+// handleSearchKeys handles keyboard input in search mode
+func (m Model) handleSearchKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		m.searchQuery = strings.ToLower(strings.TrimSpace(m.searchInput.Value()))
+		m.viewMode = ViewModeBoard
+		m.currentTask = 0 // reset task selection
+		return m, nil
+
+	case "esc":
+		m.searchInput.SetValue("")
+		m.searchQuery = ""
+		m.viewMode = ViewModeBoard
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.searchInput, cmd = m.searchInput.Update(msg)
+	return m, cmd
 }
 
 // handleAddTaskKeys handles keyboard input in add task mode

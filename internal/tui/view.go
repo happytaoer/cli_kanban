@@ -128,13 +128,28 @@ func (m Model) viewBoard() string {
 	// Set viewport content and render
 	m.viewport.SetContent(columnsView)
 
-	// Footer with help text (fixed at bottom)
-	helpText := "← → / h l: Navigate | a: Add | e: Edit | i: Desc | t: Tags | d: Del | m: Move | ?: Help | q: Quit"
+	// Footer with help text or search input (fixed at bottom)
+	var footerContent string
 	helpWidth := m.width
 	if helpWidth <= 0 {
-		helpWidth = lipgloss.Width(helpText)
+		helpWidth = 80
 	}
-	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, helpText)
+
+	if m.viewMode == ViewModeSearch {
+		// Show search input in footer
+		searchLabel := lipgloss.NewStyle().Bold(true).Render("Search: ")
+		footerContent = searchLabel + m.searchInput.View() + "  (Enter: apply | Esc: cancel)"
+	} else if m.searchQuery != "" {
+		// Show active search filter
+		searchInfo := lipgloss.NewStyle().Render(fmt.Sprintf("Filter: \"%s\"", m.searchQuery))
+		helpText := "/ : Search | Esc: Clear filter | ← → : Navigate | a: Add | e: Edit | ?: Help | q: Quit"
+		footerContent = searchInfo + "  |  " + helpText
+	} else {
+		// Normal help text
+		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | d: Del | m: Move | / : Search | ?: Help | q: Quit"
+	}
+
+	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, footerContent)
 	footer := footerStyle.Width(helpWidth).Render(helpContent)
 
 	// Combine: header + viewport + footer
@@ -159,9 +174,20 @@ func (m Model) renderStats() string {
 func (m Model) renderColumn(index int, col model.Column) string {
 	var b strings.Builder
 
+	// Filter tasks by search query
+	var filteredTasks []model.Task
+	for _, task := range col.Tasks {
+		if m.matchesSearch(task) {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+
 	// Column title with scroll indicator
-	totalTasks := len(col.Tasks)
+	totalTasks := len(filteredTasks)
 	offset := m.scrollOffsets[index]
+	if offset >= totalTasks {
+		offset = 0
+	}
 	titleStyle := columnTitleStyle
 	switch col.Status {
 	case model.StatusInProgress:
@@ -195,7 +221,7 @@ func (m Model) renderColumn(index int, col model.Column) string {
 			endIndex = totalTasks
 		}
 		for i := offset; i < endIndex; i++ {
-			task := col.Tasks[i]
+			task := filteredTasks[i]
 			isActive := index == m.currentColumn && i == m.currentTask
 			taskView := m.renderTask(task, isActive)
 			b.WriteString(taskView)
@@ -286,6 +312,28 @@ func getTagColor(tag string) lipgloss.Color {
 		hash += int(c)
 	}
 	return colors[hash%len(colors)]
+}
+
+// matchesSearch checks if a task matches the current search query
+func (m Model) matchesSearch(task model.Task) bool {
+	if m.searchQuery == "" {
+		return true
+	}
+	// Search in title
+	if strings.Contains(strings.ToLower(task.Title), m.searchQuery) {
+		return true
+	}
+	// Search in description
+	if strings.Contains(strings.ToLower(task.Description), m.searchQuery) {
+		return true
+	}
+	// Search in tags
+	for _, tag := range task.Tags {
+		if strings.Contains(strings.ToLower(tag), m.searchQuery) {
+			return true
+		}
+	}
+	return false
 }
 
 // viewAddTask renders the add task view
