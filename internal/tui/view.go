@@ -229,7 +229,7 @@ func (m Model) renderColumn(index int, col model.Column) string {
 // renderTask renders a single task
 func (m Model) renderTask(task model.Task, isActive bool) string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("• %s", task.Title))
+	b.WriteString(task.Title)
 
 	// Render tags if present
 	if len(task.Tags) > 0 {
