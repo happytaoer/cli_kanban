@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/happytaoer/cli_kanban/internal/db"
 	"github.com/happytaoer/cli_kanban/internal/model"
@@ -36,8 +37,10 @@ type Model struct {
 	followTaskID    int64 // task ID to follow after reload
 	textInput       textinput.Model
 	textArea        textarea.Model
+	viewport        viewport.Model
 	width           int
 	height          int
+	ready           bool // viewport ready flag
 	err             error
 }
 

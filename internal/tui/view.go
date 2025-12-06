@@ -95,27 +95,49 @@ func (m Model) View() string {
 
 // viewBoard renders the kanban board
 func (m Model) viewBoard() string {
-	var body strings.Builder
+	var result strings.Builder
 
-	// Title
+	// Header: Title + Statistics on same line
 	title := titleStyle.Render("📋 Kanban Board")
-	body.WriteString(title)
-	body.WriteString("\n")
-
-	// Statistics
 	stats := m.renderStats()
-	body.WriteString(stats)
-	body.WriteString("\n\n")
+	headerWidth := m.width
+	if headerWidth <= 0 {
+		headerWidth = 80
+	}
+	// Place title on left, stats on right
+	header := lipgloss.JoinHorizontal(lipgloss.Center,
+		title,
+		lipgloss.NewStyle().Width(headerWidth-lipgloss.Width(title)-lipgloss.Width(stats)).Render(""),
+		stats,
+	)
+	result.WriteString(header)
+	result.WriteString("\n")
 
-	// Columns
+	// Columns content (will be placed in viewport)
 	columns := make([]string, len(m.columns))
 	for i, col := range m.columns {
 		columns[i] = m.renderColumn(i, col)
 	}
-
 	columnsView := lipgloss.JoinHorizontal(lipgloss.Top, columns...)
-	body.WriteString(columnsView)
-	body.WriteString("\n\n")
+
+	// Error message appended to columns if present
+	if m.err != nil {
+		columnsView += "\n\n" + errorStyle.Render(fmt.Sprintf("Error: %v", m.err))
+	}
+
+	// Render columns in viewport area
+	if m.ready {
+		// Use viewport height to limit content display
+		vpHeight := m.viewport.Height
+		contentLines := strings.Split(columnsView, "\n")
+		if len(contentLines) > vpHeight {
+			contentLines = contentLines[:vpHeight]
+		}
+		columnsView = strings.Join(contentLines, "\n")
+	}
+
+	result.WriteString(columnsView)
+	result.WriteString("\n")
 
 	// Footer with help text (fixed at bottom)
 	helpText := "← → / h l: Navigate columns | ↑ ↓ / j k: Navigate tasks | a: Add | e: Edit | i: Description | t: Tags | d: Delete | m: Move | ?: Help | q: Quit"
@@ -126,29 +148,19 @@ func (m Model) viewBoard() string {
 	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, helpText)
 	footer := footerStyle.Width(helpWidth).Render(helpContent)
 
-	bodyStr := body.String()
-
-	// Error message
-	if m.err != nil {
-		bodyStr += "\n\n" + errorStyle.Render(fmt.Sprintf("Error: %v", m.err)) + "\n"
-	}
-
-	footerStr := footer
-
+	// Pad to push footer to bottom
+	contentHeight := lipgloss.Height(result.String())
+	footerHeight := lipgloss.Height(footer)
 	if m.height > 0 {
-		contentHeight := lipgloss.Height(bodyStr)
-		helpHeight := lipgloss.Height(footerStr)
-		available := m.height - helpHeight
-		if available < 0 {
-			available = 0
-		}
+		available := m.height - footerHeight
 		if available > contentHeight {
 			padLines := available - contentHeight
-			bodyStr += strings.Repeat("\n", padLines)
+			result.WriteString(strings.Repeat("\n", padLines))
 		}
 	}
 
-	return bodyStr + footerStr
+	result.WriteString(footer)
+	return result.String()
 }
 
 // renderStats renders the statistics bar

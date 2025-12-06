@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/happytaoer/cli_kanban/internal/model"
 )
@@ -16,6 +17,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
+		// Calculate viewport height (total height - header - footer)
+		headerHeight := 2 // title+stats line + spacing
+		footerHeight := 3 // footer + spacing
+		vpHeight := msg.Height - headerHeight - footerHeight
+		if vpHeight < 1 {
+			vpHeight = 1
+		}
+
+		if !m.ready {
+			m.viewport = viewport.New(msg.Width, vpHeight)
+			m.viewport.YPosition = headerHeight
+			m.ready = true
+		} else {
+			m.viewport.Width = msg.Width
+			m.viewport.Height = vpHeight
+		}
 		return m, nil
 
 	case clockTickMsg:
