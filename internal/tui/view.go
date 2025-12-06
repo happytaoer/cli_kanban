@@ -38,12 +38,12 @@ var (
 	taskStyle = lipgloss.NewStyle().
 			Padding(0, 1).
 			MarginBottom(1).
-			Width(24)
+			Width(26)
 
 	taskActiveStyle = lipgloss.NewStyle().
 			Padding(0, 1).
 			MarginBottom(1).
-			Width(24).
+			Width(26).
 			Background(colorPrimary).
 			Foreground(lipgloss.Color("#FFFFFF")).
 			Bold(true)
