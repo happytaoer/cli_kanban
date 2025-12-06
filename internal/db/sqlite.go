@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/happytaoer/cli_kanban/internal/model"
@@ -63,6 +64,12 @@ func (db *DB) initTables() error {
 		// Column might already exist, which is fine
 	}
 
+	// Migrate existing tables to add tags column if it doesn't exist
+	_, err = db.conn.Exec(`
+		ALTER TABLE tasks ADD COLUMN tags TEXT DEFAULT '';
+	`)
+	// Ignore error if column already exists
+
 	return nil
 }
 
@@ -70,8 +77,8 @@ func (db *DB) initTables() error {
 func (db *DB) CreateTask(title string, status model.TaskStatus) (*model.Task, error) {
 	now := time.Now()
 	result, err := db.conn.Exec(
-		"INSERT INTO tasks (title, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-		title, "", status, now, now,
+		"INSERT INTO tasks (title, description, tags, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+		title, "", "", status, now, now,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %w", err)
@@ -86,6 +93,7 @@ func (db *DB) CreateTask(title string, status model.TaskStatus) (*model.Task, er
 		ID:          id,
 		Title:       title,
 		Description: "",
+		Tags:        []string{},
 		Status:      status,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -95,7 +103,7 @@ func (db *DB) CreateTask(title string, status model.TaskStatus) (*model.Task, er
 // GetAllTasks retrieves all tasks
 func (db *DB) GetAllTasks() ([]model.Task, error) {
 	rows, err := db.conn.Query(
-		"SELECT id, title, description, status, created_at, updated_at FROM tasks ORDER BY created_at DESC",
+		"SELECT id, title, description, tags, status, created_at, updated_at FROM tasks ORDER BY created_at DESC",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
@@ -105,10 +113,12 @@ func (db *DB) GetAllTasks() ([]model.Task, error) {
 	var tasks []model.Task
 	for rows.Next() {
 		var task model.Task
-		err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		var tagsStr string
+		err := rows.Scan(&task.ID, &task.Title, &task.Description, &tagsStr, &task.Status, &task.CreatedAt, &task.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
+		task.Tags = parseTags(tagsStr)
 		tasks = append(tasks, task)
 	}
 
@@ -118,7 +128,7 @@ func (db *DB) GetAllTasks() ([]model.Task, error) {
 // GetTasksByStatus retrieves tasks by status
 func (db *DB) GetTasksByStatus(status model.TaskStatus) ([]model.Task, error) {
 	rows, err := db.conn.Query(
-		"SELECT id, title, description, status, created_at, updated_at FROM tasks WHERE status = ? ORDER BY created_at DESC",
+		"SELECT id, title, description, tags, status, created_at, updated_at FROM tasks WHERE status = ? ORDER BY created_at DESC",
 		status,
 	)
 	if err != nil {
@@ -129,10 +139,12 @@ func (db *DB) GetTasksByStatus(status model.TaskStatus) ([]model.Task, error) {
 	var tasks []model.Task
 	for rows.Next() {
 		var task model.Task
-		err := rows.Scan(&task.ID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		var tagsStr string
+		err := rows.Scan(&task.ID, &task.Title, &task.Description, &tagsStr, &task.Status, &task.CreatedAt, &task.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
+		task.Tags = parseTags(tagsStr)
 		tasks = append(tasks, task)
 	}
 
@@ -222,4 +234,57 @@ func (db *DB) DeleteTask(id int64) error {
 	}
 
 	return nil
+}
+
+// UpdateTaskTags updates only the tags of a task
+func (db *DB) UpdateTaskTags(id int64, tags []string) error {
+	tagsStr := tagsToString(tags)
+	result, err := db.conn.Exec(
+		"UPDATE tasks SET tags = ?, updated_at = ? WHERE id = ?",
+		tagsStr, time.Now(), id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update task tags: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("task not found")
+	}
+
+	return nil
+}
+
+// parseTags converts comma-separated string to slice
+func parseTags(tagsStr string) []string {
+	if tagsStr == "" {
+		return []string{}
+	}
+	parts := strings.Split(tagsStr, ",")
+	var tags []string
+	for _, p := range parts {
+		t := strings.TrimSpace(strings.ToLower(p))
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+	return tags
+}
+
+// tagsToString converts slice to comma-separated string
+func tagsToString(tags []string) string {
+	var cleaned []string
+	seen := make(map[string]bool)
+	for _, t := range tags {
+		t = strings.TrimSpace(strings.ToLower(t))
+		if t != "" && !seen[t] {
+			cleaned = append(cleaned, t)
+			seen[t] = true
+		}
+	}
+	return strings.Join(cleaned, ",")
 }

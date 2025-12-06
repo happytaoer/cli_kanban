@@ -18,6 +18,7 @@ const (
 	ViewModeAddTask
 	ViewModeEditTask
 	ViewModeEditDescription
+	ViewModeEditTags
 	ViewModeConfirmDelete
 	ViewModeHelp
 )
@@ -104,6 +105,8 @@ type taskUpdatedMsg struct{}
 type taskDeletedMsg struct{}
 
 type descriptionUpdatedMsg struct{}
+
+type tagsUpdatedMsg struct{}
 
 type clockTickMsg time.Time
 

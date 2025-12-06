@@ -82,6 +82,8 @@ func (m Model) View() string {
 		return m.viewEditTask()
 	case ViewModeEditDescription:
 		return m.viewEditDescription()
+	case ViewModeEditTags:
+		return m.viewEditTags()
 	case ViewModeConfirmDelete:
 		return m.viewConfirmDelete()
 	case ViewModeHelp:
@@ -116,7 +118,7 @@ func (m Model) viewBoard() string {
 	body.WriteString("\n\n")
 
 	// Footer with help text (fixed at bottom)
-	helpText := "← → / h l: Navigate columns | ↑ ↓ / j k: Navigate tasks | a: Add | e: Edit | i: Description | d: Delete | m: Move | ?: Help | q: Quit"
+	helpText := "← → / h l: Navigate columns | ↑ ↓ / j k: Navigate tasks | a: Add | e: Edit | i: Description | t: Tags | d: Delete | m: Move | ?: Help | q: Quit"
 	helpWidth := m.width
 	if helpWidth <= 0 {
 		helpWidth = lipgloss.Width(helpText)
@@ -236,11 +238,50 @@ func (m Model) renderColumn(index int, col model.Column) string {
 
 // renderTask renders a single task
 func (m Model) renderTask(task model.Task, isActive bool) string {
-	text := fmt.Sprintf("• %s", task.Title)
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("• %s", task.Title))
+
+	// Render tags if present
+	if len(task.Tags) > 0 {
+		b.WriteString("\n  ")
+		for i, tag := range task.Tags {
+			if i > 2 {
+				b.WriteString(fmt.Sprintf("+%d", len(task.Tags)-3))
+				break
+			}
+			tagStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FFFFFF")).
+				Background(getTagColor(tag)).
+				Padding(0, 1)
+			b.WriteString(tagStyle.Render(tag))
+			if i < len(task.Tags)-1 && i < 2 {
+				b.WriteString(" ")
+			}
+		}
+	}
+
+	text := b.String()
 	if isActive {
 		return taskActiveStyle.Render(text)
 	}
 	return taskStyle.Render(text)
+}
+
+// getTagColor returns a color based on tag name hash
+func getTagColor(tag string) lipgloss.Color {
+	colors := []lipgloss.Color{
+		lipgloss.Color("#EF4444"), // red
+		lipgloss.Color("#F59E0B"), // orange
+		lipgloss.Color("#10B981"), // green
+		lipgloss.Color("#3B82F6"), // blue
+		lipgloss.Color("#8B5CF6"), // purple
+		lipgloss.Color("#EC4899"), // pink
+	}
+	hash := 0
+	for _, c := range tag {
+		hash += int(c)
+	}
+	return colors[hash%len(colors)]
 }
 
 // viewAddTask renders the add task view
@@ -309,6 +350,35 @@ func (m Model) viewEditDescription() string {
 	return b.String()
 }
 
+// viewEditTags renders the edit tags view
+func (m Model) viewEditTags() string {
+	var b strings.Builder
+
+	title := titleStyle.Render("🏷️  Edit Tags")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	task := m.getCurrentTask()
+	if task != nil {
+		info := fmt.Sprintf("Task: %s", task.Title)
+		b.WriteString(lipgloss.NewStyle().Foreground(colorSecondary).Render(info))
+		b.WriteString("\n\n")
+	}
+
+	hint := lipgloss.NewStyle().Foreground(colorMuted).Render("Separate tags with commas (e.g., bug, urgent, feature)")
+	b.WriteString(hint)
+	b.WriteString("\n\n")
+
+	input := inputStyle.Render(m.textInput.View())
+	b.WriteString(input)
+	b.WriteString("\n\n")
+
+	help := helpStyle.Render("Enter: Save | Esc: Cancel")
+	b.WriteString(help)
+
+	return b.String()
+}
+
 // viewConfirmDelete renders the delete confirmation view
 func (m Model) viewConfirmDelete() string {
 	var b strings.Builder
@@ -349,6 +419,7 @@ Actions:
   a             Add new task to current column
   e or Enter    Edit selected task title
   i             Edit selected task description
+  t             Edit selected task tags
   d or Delete   Delete selected task
   m             Move task to next column
 

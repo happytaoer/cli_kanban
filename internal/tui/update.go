@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -37,6 +38,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case descriptionUpdatedMsg:
 		return m, m.loadTasks()
 
+	case tagsUpdatedMsg:
+		return m, m.loadTasks()
+
 	case errMsg:
 		m.err = msg.err
 		return m, nil
@@ -46,7 +50,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle text input updates
-	if m.viewMode == ViewModeAddTask || m.viewMode == ViewModeEditTask {
+	if m.viewMode == ViewModeAddTask || m.viewMode == ViewModeEditTask || m.viewMode == ViewModeEditTags {
 		m.textInput, cmd = m.textInput.Update(msg)
 		return m, cmd
 	}
@@ -87,6 +91,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEditTaskKeys(msg)
 	case ViewModeEditDescription:
 		return m.handleEditDescriptionKeys(msg)
+	case ViewModeEditTags:
+		return m.handleEditTagsKeys(msg)
 	case ViewModeConfirmDelete:
 		return m.handleConfirmDeleteKeys(msg)
 	case ViewModeHelp:
@@ -170,6 +176,15 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case "t":
+		task := m.getCurrentTask()
+		if task != nil {
+			m.viewMode = ViewModeEditTags
+			m.textInput.SetValue(strings.Join(task.Tags, ", "))
+			m.textInput.Focus()
+		}
+		return m, nil
+
 	case "?":
 		m.viewMode = ViewModeHelp
 		return m, nil
@@ -250,6 +265,44 @@ func (m Model) handleEditDescriptionKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// handleEditTagsKeys handles keyboard input in edit tags mode
+func (m Model) handleEditTagsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		tagsStr := m.textInput.Value()
+		task := m.getCurrentTask()
+		if task != nil {
+			tags := parseTagsInput(tagsStr)
+			m.viewMode = ViewModeBoard
+			m.textInput.SetValue("")
+			return m, m.updateTags(task.ID, tags)
+		}
+		return m, nil
+
+	case "esc":
+		m.viewMode = ViewModeBoard
+		m.textInput.SetValue("")
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
+}
+
+// parseTagsInput parses comma-separated tags input
+func parseTagsInput(input string) []string {
+	parts := strings.Split(input, ",")
+	var tags []string
+	for _, p := range parts {
+		t := strings.TrimSpace(strings.ToLower(p))
+		if t != "" {
+			tags = append(tags, t)
+		}
+	}
+	return tags
+}
+
 // handleConfirmDeleteKeys handles keyboard input in delete confirmation mode
 func (m Model) handleConfirmDeleteKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
@@ -315,6 +368,17 @@ func (m Model) updateDescription(id int64, description string) tea.Cmd {
 			return errMsg{err}
 		}
 		return descriptionUpdatedMsg{}
+	}
+}
+
+// updateTags updates a task's tags
+func (m Model) updateTags(id int64, tags []string) tea.Cmd {
+	return func() tea.Msg {
+		err := m.db.UpdateTaskTags(id, tags)
+		if err != nil {
+			return errMsg{err}
+		}
+		return tagsUpdatedMsg{}
 	}
 }
 
