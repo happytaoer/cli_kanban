@@ -255,10 +255,49 @@ func (m Model) renderColumn(index int, col model.Column) string {
 	return style.Render(content)
 }
 
+// wrapText wraps text at maxWidth using character-based breaking (like HTML break-all)
+func wrapText(text string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return text
+	}
+	var result strings.Builder
+	lineWidth := 0
+	for _, r := range text {
+		charWidth := runeWidth(r)
+		if lineWidth+charWidth > maxWidth {
+			result.WriteRune('\n')
+			lineWidth = 0
+		}
+		result.WriteRune(r)
+		lineWidth += charWidth
+	}
+	return result.String()
+}
+
+// runeWidth returns the display width of a rune (CJK chars are 2, others are 1)
+func runeWidth(r rune) int {
+	// CJK characters typically take 2 columns
+	if r >= 0x4E00 && r <= 0x9FFF || // CJK Unified Ideographs
+		r >= 0x3400 && r <= 0x4DBF || // CJK Unified Ideographs Extension A
+		r >= 0xFF00 && r <= 0xFFEF { // Fullwidth Forms
+		return 2
+	}
+	return 1
+}
+
 // renderTask renders a single task
 func (m Model) renderTask(task model.Task, isActive bool) string {
 	var b strings.Builder
-	b.WriteString(task.Title)
+
+	// Get max width for text wrapping (account for padding)
+	maxWidth := taskStyle.GetWidth() - 2 // subtract padding
+	if maxWidth <= 0 {
+		maxWidth = 22
+	}
+
+	// Wrap title text using character-based breaking
+	wrappedTitle := wrapText(task.Title, maxWidth)
+	b.WriteString(wrappedTitle)
 
 	// Render due date if present (below title)
 	if task.Due != nil {
