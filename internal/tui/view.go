@@ -84,6 +84,8 @@ func (m Model) View() string {
 		return m.viewEditDescription()
 	case ViewModeEditTags:
 		return m.viewEditTags()
+	case ViewModeEditDue:
+		return m.viewEditDue()
 	case ViewModeConfirmDelete:
 		return m.viewConfirmDelete()
 	case ViewModeHelp:
@@ -146,7 +148,7 @@ func (m Model) viewBoard() string {
 		footerContent = searchInfo + "  |  " + helpText
 	} else {
 		// Normal help text
-		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | d: Del | m: Move | / : Search | ?: Help | q: Quit"
+		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | u: Due | d: Del | m: Move | / : Search | ?: Help | q: Quit"
 	}
 
 	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, footerContent)
@@ -256,6 +258,14 @@ func (m Model) renderColumn(index int, col model.Column) string {
 func (m Model) renderTask(task model.Task, isActive bool) string {
 	var b strings.Builder
 	b.WriteString(task.Title)
+
+	// Render due date if present (below title)
+	if task.Due != nil {
+		dueStr := task.Due.Format("2006-01-02")
+		dueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF"))
+		b.WriteString("\n")
+		b.WriteString(dueStyle.Render("📅 " + dueStr))
+	}
 
 	// Render tags if present
 	if len(task.Tags) > 0 {
@@ -454,6 +464,41 @@ func (m Model) viewEditTags() string {
 	return b.String()
 }
 
+// viewEditDue renders the edit due date view
+func (m Model) viewEditDue() string {
+	var b strings.Builder
+
+	title := titleStyle.Render("📅 Edit Due Date")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	task := m.getCurrentTask()
+	if task != nil {
+		info := fmt.Sprintf("Task: %s", task.Title)
+		b.WriteString(lipgloss.NewStyle().Foreground(colorSecondary).Render(info))
+		b.WriteString("\n\n")
+
+		if task.Due != nil {
+			currentDue := fmt.Sprintf("Current due: %s", task.Due.Format("2006-01-02"))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorMuted).Render(currentDue))
+			b.WriteString("\n\n")
+		}
+	}
+
+	hint := lipgloss.NewStyle().Foreground(colorMuted).Render("Format: YYYY-MM-DD (leave empty to clear)")
+	b.WriteString(hint)
+	b.WriteString("\n\n")
+
+	input := inputStyle.Render(m.dueInput.View())
+	b.WriteString(input)
+	b.WriteString("\n\n")
+
+	help := helpStyle.Render("Enter: Save | Esc: Cancel")
+	b.WriteString(help)
+
+	return b.String()
+}
+
 // viewConfirmDelete renders the delete confirmation view
 func (m Model) viewConfirmDelete() string {
 	var b strings.Builder
@@ -495,6 +540,7 @@ Actions:
   e or Enter    Edit selected task title
   i             Edit selected task description
   t             Edit selected task tags
+  u             Edit selected task due date
   d or Delete   Delete selected task
   m             Move task to next column
 

@@ -20,6 +20,7 @@ const (
 	ViewModeEditTask
 	ViewModeEditDescription
 	ViewModeEditTags
+	ViewModeEditDue
 	ViewModeConfirmDelete
 	ViewModeHelp
 	ViewModeSearch
@@ -39,6 +40,7 @@ type Model struct {
 	textInput       textinput.Model
 	textArea        textarea.Model
 	searchInput     textinput.Model
+	dueInput        textinput.Model
 	searchQuery     string // active search filter
 	viewport        viewport.Model
 	width           int
@@ -73,6 +75,11 @@ func NewModel(database *db.DB) Model {
 	si.CharLimit = 100
 	si.Width = 30
 
+	di := textinput.New()
+	di.Placeholder = "YYYY-MM-DD (leave empty to clear)"
+	di.CharLimit = 20
+	di.Width = 30
+
 	return Model{
 		db:            database,
 		columns:       model.GetAllColumns(),
@@ -84,6 +91,7 @@ func NewModel(database *db.DB) Model {
 		textInput:     ti,
 		textArea:      ta,
 		searchInput:   si,
+		dueInput:      di,
 	}
 }
 
@@ -119,6 +127,8 @@ type taskDeletedMsg struct{}
 type descriptionUpdatedMsg struct{}
 
 type tagsUpdatedMsg struct{}
+
+type dueUpdatedMsg struct{}
 
 type clockTickMsg time.Time
 

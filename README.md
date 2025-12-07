@@ -8,9 +8,10 @@ A terminal-based Kanban board management tool built with Go, featuring a beautif
 
 - 📋 **Three-column board**: Todo / In Progress / Done
 - ✨ **Full CRUD operations**: Add, edit, and delete tasks
-- �️ **Task tags**: Categorize tasks with colored tags
+- 🏷️ **Task tags**: Categorize tasks with colored tags
+- 📅 **Due dates**: Set deadlines with color-coded status (overdue, today, upcoming)
 - 🔍 **Search & filter**: Quick search across tasks with tag: syntax support
-- �🎨 **Beautiful TUI interface**: Built with Bubble Tea framework
+- 🎨 **Beautiful TUI interface**: Built with Bubble Tea framework
 - 💾 **SQLite persistence**: Data automatically saved to local database
 - ⌨️ **Keyboard shortcuts**: Efficient keyboard navigation
 
@@ -60,6 +61,7 @@ go build -o cli_kanban
 - `e` or `Enter` - Edit selected task title
 - `i` - Edit selected task description
 - `t` - Edit selected task tags
+- `u` - Edit selected task due date
 - `d` or `Delete` - Delete selected task
 - `m` - Move task to next column
 
@@ -114,6 +116,7 @@ cli_kanban/
 | description | TEXT | Task description |
 | status | TEXT | Task status (todo/in_progress/done) |
 | tags | TEXT | Comma-separated tags |
+| due | DATETIME | Due date (optional) |
 | created_at | DATETIME | Creation timestamp |
 | updated_at | DATETIME | Last update timestamp |
 

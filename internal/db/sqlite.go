@@ -70,6 +70,12 @@ func (db *DB) initTables() error {
 	`)
 	// Ignore error if column already exists
 
+	// Migrate existing tables to add due column if it doesn't exist
+	_, err = db.conn.Exec(`
+		ALTER TABLE tasks ADD COLUMN due DATETIME DEFAULT NULL;
+	`)
+	// Ignore error if column already exists
+
 	return nil
 }
 
@@ -103,7 +109,7 @@ func (db *DB) CreateTask(title string, status model.TaskStatus) (*model.Task, er
 // GetAllTasks retrieves all tasks
 func (db *DB) GetAllTasks() ([]model.Task, error) {
 	rows, err := db.conn.Query(
-		"SELECT id, title, description, tags, status, created_at, updated_at FROM tasks ORDER BY created_at DESC",
+		"SELECT id, title, description, tags, due, status, created_at, updated_at FROM tasks ORDER BY created_at DESC",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tasks: %w", err)
@@ -114,11 +120,13 @@ func (db *DB) GetAllTasks() ([]model.Task, error) {
 	for rows.Next() {
 		var task model.Task
 		var tagsStr string
-		err := rows.Scan(&task.ID, &task.Title, &task.Description, &tagsStr, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		var dueStr sql.NullString
+		err := rows.Scan(&task.ID, &task.Title, &task.Description, &tagsStr, &dueStr, &task.Status, &task.CreatedAt, &task.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
 		task.Tags = parseTags(tagsStr)
+		task.Due = parseDue(dueStr)
 		tasks = append(tasks, task)
 	}
 
@@ -128,7 +136,7 @@ func (db *DB) GetAllTasks() ([]model.Task, error) {
 // GetTasksByStatus retrieves tasks by status
 func (db *DB) GetTasksByStatus(status model.TaskStatus) ([]model.Task, error) {
 	rows, err := db.conn.Query(
-		"SELECT id, title, description, tags, status, created_at, updated_at FROM tasks WHERE status = ? ORDER BY created_at DESC",
+		"SELECT id, title, description, tags, due, status, created_at, updated_at FROM tasks WHERE status = ? ORDER BY created_at DESC",
 		status,
 	)
 	if err != nil {
@@ -140,11 +148,13 @@ func (db *DB) GetTasksByStatus(status model.TaskStatus) ([]model.Task, error) {
 	for rows.Next() {
 		var task model.Task
 		var tagsStr string
-		err := rows.Scan(&task.ID, &task.Title, &task.Description, &tagsStr, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		var dueStr sql.NullString
+		err := rows.Scan(&task.ID, &task.Title, &task.Description, &tagsStr, &dueStr, &task.Status, &task.CreatedAt, &task.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
 		task.Tags = parseTags(tagsStr)
+		task.Due = parseDue(dueStr)
 		tasks = append(tasks, task)
 	}
 
@@ -287,4 +297,52 @@ func tagsToString(tags []string) string {
 		}
 	}
 	return strings.Join(cleaned, ",")
+}
+
+// parseDue converts nullable string to *time.Time
+func parseDue(dueStr sql.NullString) *time.Time {
+	if !dueStr.Valid || dueStr.String == "" {
+		return nil
+	}
+	// Try parsing with different formats
+	formats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05Z",
+		"2006-01-02",
+	}
+	for _, format := range formats {
+		if t, err := time.Parse(format, dueStr.String); err == nil {
+			return &t
+		}
+	}
+	return nil
+}
+
+// UpdateTaskDue updates a task's due date
+func (db *DB) UpdateTaskDue(id int64, due *time.Time) error {
+	var dueValue interface{}
+	if due != nil {
+		dueValue = due.Format("2006-01-02 15:04:05")
+	} else {
+		dueValue = nil
+	}
+
+	result, err := db.conn.Exec(
+		"UPDATE tasks SET due = ?, updated_at = ? WHERE id = ?",
+		dueValue, time.Now(), id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update task due: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("task not found")
+	}
+
+	return nil
 }

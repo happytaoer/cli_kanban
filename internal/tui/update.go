@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -59,6 +60,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tagsUpdatedMsg:
 		return m, m.loadTasks()
 
+	case dueUpdatedMsg:
+		return m, m.loadTasks()
+
 	case errMsg:
 		m.err = msg.err
 		return m, nil
@@ -82,6 +86,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Handle search input updates
 	if m.viewMode == ViewModeSearch {
 		m.searchInput, cmd = m.searchInput.Update(msg)
+		return m, cmd
+	}
+
+	// Handle due input updates
+	if m.viewMode == ViewModeEditDue {
+		m.dueInput, cmd = m.dueInput.Update(msg)
 		return m, cmd
 	}
 
@@ -123,6 +133,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEditDescriptionKeys(msg)
 	case ViewModeEditTags:
 		return m.handleEditTagsKeys(msg)
+	case ViewModeEditDue:
+		return m.handleEditDueKeys(msg)
 	case ViewModeConfirmDelete:
 		return m.handleConfirmDeleteKeys(msg)
 	case ViewModeHelp:
@@ -217,6 +229,19 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case "u":
+		task := m.getCurrentTask()
+		if task != nil {
+			m.viewMode = ViewModeEditDue
+			if task.Due != nil {
+				m.dueInput.SetValue(task.Due.Format("2006-01-02"))
+			} else {
+				m.dueInput.SetValue("")
+			}
+			m.dueInput.Focus()
+		}
+		return m, nil
+
 	case "?":
 		m.viewMode = ViewModeHelp
 		return m, nil
@@ -229,6 +254,41 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// handleEditDueKeys handles keyboard input in edit due mode
+func (m Model) handleEditDueKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		dueStr := strings.TrimSpace(m.dueInput.Value())
+		task := m.getCurrentTask()
+		if task != nil {
+			var due *time.Time
+			if dueStr != "" {
+				// Try parsing the date
+				if t, err := time.Parse("2006-01-02", dueStr); err == nil {
+					due = &t
+				} else {
+					// Invalid format, show error but stay in edit mode
+					m.err = fmt.Errorf("invalid date format, use YYYY-MM-DD")
+					return m, nil
+				}
+			}
+			m.viewMode = ViewModeBoard
+			m.dueInput.SetValue("")
+			return m, m.updateDue(task.ID, due)
+		}
+		return m, nil
+
+	case "esc":
+		m.viewMode = ViewModeBoard
+		m.dueInput.SetValue("")
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	m.dueInput, cmd = m.dueInput.Update(msg)
+	return m, cmd
 }
 
 // handleSearchKeys handles keyboard input in search mode
@@ -438,6 +498,17 @@ func (m Model) updateTags(id int64, tags []string) tea.Cmd {
 			return errMsg{err}
 		}
 		return tagsUpdatedMsg{}
+	}
+}
+
+// updateDue updates a task's due date
+func (m Model) updateDue(id int64, due *time.Time) tea.Cmd {
+	return func() tea.Msg {
+		err := m.db.UpdateTaskDue(id, due)
+		if err != nil {
+			return errMsg{err}
+		}
+		return dueUpdatedMsg{}
 	}
 }
 
