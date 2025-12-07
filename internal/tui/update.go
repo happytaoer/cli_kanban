@@ -43,6 +43,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tasksLoadedMsg:
 		m.organizeTasks(msg.tasks)
+		m.err = nil
 		return m, nil
 
 	case taskCreatedMsg:
@@ -251,6 +252,10 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.searchInput.SetValue(m.searchQuery)
 		m.searchInput.Focus()
 		return m, nil
+
+	case "f5":
+		// Refresh: reload tasks from database
+		return m, m.loadTasks()
 	}
 
 	return m, nil

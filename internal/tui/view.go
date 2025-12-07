@@ -144,11 +144,11 @@ func (m Model) viewBoard() string {
 	} else if m.searchQuery != "" {
 		// Show active search filter
 		searchInfo := lipgloss.NewStyle().Render(fmt.Sprintf("Filter: \"%s\"", m.searchQuery))
-		helpText := "/ : Search | Esc: Clear filter | ← → : Navigate | a: Add | e: Edit | ?: Help | q: Quit"
+		helpText := "/ : Search | Esc: Clear filter | F5: Refresh | ← → : Navigate | a: Add | e: Edit | ?: Help | q: Quit"
 		footerContent = searchInfo + "  |  " + helpText
 	} else {
 		// Normal help text
-		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | u: Due | d: Del | m: Move | / : Search | ?: Help | q: Quit"
+		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | u: Due | d: Del | m: Move | / : Search | F5: Refresh | ?: Help | q: Quit"
 	}
 
 	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, footerContent)
@@ -554,6 +554,7 @@ Search:
     tag:name    Search only in tags (exact match)
 
 Other:
+  F5            Refresh board
   ?             Show this help
   q or Ctrl+C   Quit application
   Esc           Cancel current action or quit

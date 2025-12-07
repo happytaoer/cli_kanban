@@ -75,6 +75,7 @@ go build -o cli_kanban
 - `tag:name` - Search only in tags (exact match)
 
 #### Other
+- `F5` - Refresh board (reload tasks)
 - `?` - Show help
 - `q` or `Ctrl+C` - Quit application
 - `Esc` - Cancel current action or quit
