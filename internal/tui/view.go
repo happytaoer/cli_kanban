@@ -141,7 +141,7 @@ func (m Model) viewBoard() string {
 	if m.viewMode == ViewModeSearch {
 		// Show search input in footer
 		searchLabel := lipgloss.NewStyle().Bold(true).Render("Search: ")
-		footerContent = searchLabel + m.searchInput.View() + "  (Enter: apply | Esc: cancel)"
+		footerContent = searchLabel + m.searchInput.View()
 	} else if m.searchQuery != "" {
 		// Show active search filter
 		searchInfo := lipgloss.NewStyle().Render(fmt.Sprintf("Filter: \"%s\"", m.searchQuery))
