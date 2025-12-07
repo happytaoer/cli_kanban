@@ -75,7 +75,11 @@ go build -o cli_kanban
 - `title:text` - Search only in title
 - `desc:text` - Search only in description
 - `tag:name` - Search only in tags (exact match)
-- `due:YYYY-MM-DD` - Search by exact due date
+- `due:YYYY-MM-DD` - Exact due date match
+- `due:<YYYY-MM-DD` - Due before date
+- `due:>YYYY-MM-DD` - Due after date
+- `due:<=YYYY-MM-DD` - Due on or before date
+- `due:>=YYYY-MM-DD` - Due on or after date
 
 #### Other
 - `F5` - Refresh board (reload tasks)

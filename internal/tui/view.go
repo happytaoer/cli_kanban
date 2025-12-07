@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/happytaoer/cli_kanban/internal/model"
@@ -378,7 +379,39 @@ func (m Model) matchesSearch(task model.Task) bool {
 			return false
 		}
 
-		// Parse query date and compare
+		taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+
+		// Check for comparison operators
+		if strings.HasPrefix(dueQuery, "<=") {
+			dateStr := strings.TrimPrefix(dueQuery, "<=")
+			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				return !taskDue.After(queryDate)
+			}
+			return false
+		}
+		if strings.HasPrefix(dueQuery, ">=") {
+			dateStr := strings.TrimPrefix(dueQuery, ">=")
+			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				return !taskDue.Before(queryDate)
+			}
+			return false
+		}
+		if strings.HasPrefix(dueQuery, "<") {
+			dateStr := strings.TrimPrefix(dueQuery, "<")
+			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				return taskDue.Before(queryDate)
+			}
+			return false
+		}
+		if strings.HasPrefix(dueQuery, ">") {
+			dateStr := strings.TrimPrefix(dueQuery, ">")
+			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				return taskDue.After(queryDate)
+			}
+			return false
+		}
+
+		// Exact match
 		taskDueStr := task.Due.Format("2006-01-02")
 		return taskDueStr == dueQuery
 	}
@@ -589,7 +622,11 @@ Search:
     title:text   Search only in title
     desc:text    Search only in description
     tag:name     Search only in tags (exact match)
-    due:YYYY-MM-DD  Search by exact due date
+    due:YYYY-MM-DD   Exact due date match
+    due:<YYYY-MM-DD  Due before date
+    due:>YYYY-MM-DD  Due after date
+    due:<=YYYY-MM-DD Due on or before date
+    due:>=YYYY-MM-DD Due on or after date
 
 Other:
   F5            Refresh board
