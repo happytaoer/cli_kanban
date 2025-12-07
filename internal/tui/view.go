@@ -374,7 +374,29 @@ func (m Model) matchesSearch(task model.Task) bool {
 			return true
 		}
 
-		// If task has no due date
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+		// Special keywords
+		if dueQuery == "none" {
+			return task.Due == nil
+		}
+		if dueQuery == "today" {
+			if task.Due == nil {
+				return false
+			}
+			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+			return taskDue.Equal(today)
+		}
+		if dueQuery == "overdue" {
+			if task.Due == nil {
+				return false
+			}
+			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+			return taskDue.Before(today)
+		}
+
+		// If task has no due date (for comparison operators)
 		if task.Due == nil {
 			return false
 		}
@@ -627,6 +649,9 @@ Search:
     due:>YYYY-MM-DD  Due after date
     due:<=YYYY-MM-DD Due on or before date
     due:>=YYYY-MM-DD Due on or after date
+    due:today    Due today
+    due:overdue  Past due date
+    due:none     No due date set
 
 Other:
   F5            Refresh board
