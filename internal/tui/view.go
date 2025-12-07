@@ -332,6 +332,15 @@ func (m Model) matchesSearch(task model.Task) bool {
 
 	query := m.searchQuery
 
+	// Check for title: prefix (title-only search)
+	if strings.HasPrefix(query, "title:") {
+		titleQuery := strings.TrimPrefix(query, "title:")
+		if titleQuery == "" {
+			return true
+		}
+		return strings.Contains(strings.ToLower(task.Title), titleQuery)
+	}
+
 	// Check for tag: prefix (tag-only search)
 	if strings.HasPrefix(query, "tag:") {
 		tagQuery := strings.TrimPrefix(query, "tag:")
@@ -550,8 +559,9 @@ Search:
   Esc           Clear search filter (when active)
   
   Search syntax:
-    keyword     Search in title, description and tags
-    tag:name    Search only in tags (exact match)
+    keyword      Search in title, description and tags
+    title:text   Search only in title
+    tag:name     Search only in tags (exact match)
 
 Other:
   F5            Refresh board
