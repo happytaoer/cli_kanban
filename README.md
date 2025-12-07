@@ -65,10 +65,10 @@ go build -o cli_kanban
 - `d` or `Delete` - Delete selected task
 - `m` - Move task to next column
 
-#### Search
-- `/` - Open search input
-- `Enter` - Apply search filter
-- `Esc` - Clear search filter (when active)
+#### Command / Search
+- `/` - Open command input (supports search syntax today)
+- `Enter` - Run command / apply search
+- `Esc` - Clear command input (when active)
 
 **Search syntax:**
 - `keyword` - Search in title, description and tags

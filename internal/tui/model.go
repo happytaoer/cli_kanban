@@ -71,7 +71,6 @@ func NewModel(database *db.DB) Model {
 	ta.CharLimit = 2000
 
 	si := textinput.New()
-	si.Placeholder = "Search tasks..."
 	si.CharLimit = 100
 	si.Width = 30
 

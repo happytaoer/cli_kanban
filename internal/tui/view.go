@@ -139,17 +139,17 @@ func (m Model) viewBoard() string {
 	}
 
 	if m.viewMode == ViewModeSearch {
-		// Show search input in footer
-		searchLabel := lipgloss.NewStyle().Bold(true).Render("Search: ")
+		// Show command input in footer
+		searchLabel := lipgloss.NewStyle().Bold(true).Render("Command: ")
 		footerContent = searchLabel + m.searchInput.View()
 	} else if m.searchQuery != "" {
 		// Show active search filter
 		searchInfo := lipgloss.NewStyle().Render(fmt.Sprintf("Filter: \"%s\"", m.searchQuery))
-		helpText := "/ : Search | Esc: Clear filter | F5: Refresh | ← → : Navigate | a: Add | e: Edit | ?: Help | q: Quit"
+		helpText := "/ : Command | Esc: Clear filter | F5: Refresh | ← → : Navigate | a: Add | e: Edit | ?: Help | q: Quit"
 		footerContent = searchInfo + "  |  " + helpText
 	} else {
 		// Normal help text
-		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | u: Due | d: Del | m: Move | / : Search | F5: Refresh | ?: Help | q: Quit"
+		footerContent = "← → : Navigate | a: Add | e: Edit | i: Desc | t: Tags | u: Due | d: Del | m: Move | / : Command | F5: Refresh | ?: Help | q: Quit"
 	}
 
 	helpContent := lipgloss.PlaceHorizontal(helpWidth, lipgloss.Left, footerContent)
@@ -689,12 +689,12 @@ Actions:
   d or Delete   Delete selected task
   m             Move task to next column
 
-Search:
-  /             Open search input
-  Enter         Apply search filter
-  Esc           Clear search filter (when active)
+Command:
+  /             Open command input
+  Enter         Run command
+  Esc           Clear command input (when active)
   
-  Search syntax:
+  Supported syntax:
     keyword      Search in title, description and tags
     title:text   Search only in title
     desc:text    Search only in description
