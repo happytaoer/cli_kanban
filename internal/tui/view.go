@@ -366,6 +366,23 @@ func (m Model) matchesSearch(task model.Task) bool {
 		return false
 	}
 
+	// Check for due: prefix (due date search)
+	if strings.HasPrefix(query, "due:") {
+		dueQuery := strings.TrimPrefix(query, "due:")
+		if dueQuery == "" {
+			return true
+		}
+
+		// If task has no due date
+		if task.Due == nil {
+			return false
+		}
+
+		// Parse query date and compare
+		taskDueStr := task.Due.Format("2006-01-02")
+		return taskDueStr == dueQuery
+	}
+
 	// General search: title, description, tags
 	// Search in title
 	if strings.Contains(strings.ToLower(task.Title), query) {
@@ -572,6 +589,7 @@ Search:
     title:text   Search only in title
     desc:text    Search only in description
     tag:name     Search only in tags (exact match)
+    due:YYYY-MM-DD  Search by exact due date
 
 Other:
   F5            Refresh board
