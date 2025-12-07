@@ -341,6 +341,15 @@ func (m Model) matchesSearch(task model.Task) bool {
 		return strings.Contains(strings.ToLower(task.Title), titleQuery)
 	}
 
+	// Check for desc: prefix (description-only search)
+	if strings.HasPrefix(query, "desc:") {
+		descQuery := strings.TrimPrefix(query, "desc:")
+		if descQuery == "" {
+			return true
+		}
+		return strings.Contains(strings.ToLower(task.Description), descQuery)
+	}
+
 	// Check for tag: prefix (tag-only search)
 	if strings.HasPrefix(query, "tag:") {
 		tagQuery := strings.TrimPrefix(query, "tag:")
@@ -561,6 +570,7 @@ Search:
   Search syntax:
     keyword      Search in title, description and tags
     title:text   Search only in title
+    desc:text    Search only in description
     tag:name     Search only in tags (exact match)
 
 Other:

@@ -73,6 +73,7 @@ go build -o cli_kanban
 **Search syntax:**
 - `keyword` - Search in title, description and tags
 - `title:text` - Search only in title
+- `desc:text` - Search only in description
 - `tag:name` - Search only in tags (exact match)
 
 #### Other
