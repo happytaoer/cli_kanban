@@ -81,6 +81,8 @@ go build -o cli_kanban
 - `due:<=YYYY-MM-DD` - Due on or before date
 - `due:>=YYYY-MM-DD` - Due on or after date
 - `due:today` - Due today
+- `due:yesterday` - Due yesterday
+- `due:tomorrow` - Due tomorrow
 - `due:overdue` - Past due date
 - `due:none` - No due date set
 
