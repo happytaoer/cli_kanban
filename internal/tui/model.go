@@ -65,6 +65,7 @@ func NewModel(database *db.DB) Model {
 	ti.Width = 50
 
 	ta := textarea.New()
+	ta.ShowLineNumbers = false
 	ta.Placeholder = "Enter task description..."
 	ta.SetWidth(80)
 	ta.SetHeight(10)
