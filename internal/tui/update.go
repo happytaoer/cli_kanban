@@ -216,6 +216,12 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		task := m.getCurrentTask()
 		if task != nil {
 			m.viewMode = ViewModeEditDescription
+			// Expand textarea to fit available width when editing description
+			textareaWidth := m.width - 4
+			if textareaWidth < 40 {
+				textareaWidth = 40
+			}
+			m.textArea.SetWidth(textareaWidth)
 			m.textArea.SetValue(task.Description)
 			m.textArea.Focus()
 		}
