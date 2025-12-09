@@ -163,6 +163,17 @@ func (m Model) viewBoard() string {
 func (m Model) renderStats() string {
 	var parts []string
 	for _, col := range m.columns {
+		labelStyle := lipgloss.NewStyle().Foreground(colorMuted)
+		switch col.Status {
+		case model.StatusInProgress:
+			labelStyle = labelStyle.Copy().Foreground(colorInProgress)
+		case model.StatusDone:
+			labelStyle = labelStyle.Copy().Foreground(colorSuccess)
+		default:
+			labelStyle = labelStyle.Copy().Foreground(colorMuted)
+		}
+
+		label := labelStyle.Render(col.Name)
 		count := 0
 		if m.searchQuery == "" {
 			count = len(col.Tasks)
@@ -173,7 +184,7 @@ func (m Model) renderStats() string {
 				}
 			}
 		}
-		parts = append(parts, fmt.Sprintf("%s: %d", col.Name, count))
+		parts = append(parts, fmt.Sprintf("%s: %d", label, count))
 	}
 	statsText := strings.Join(parts, " | ")
 	if !m.currentTime.IsZero() {
