@@ -413,8 +413,10 @@ func (m Model) matchesSearch(task model.Task) bool {
 			return true
 		}
 
+		// Use local time for date comparisons to respect user's timezone
 		now := time.Now()
-		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		loc := now.Location()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 
 		// Special keywords
 		if dueQuery == "none" {
@@ -424,7 +426,7 @@ func (m Model) matchesSearch(task model.Task) bool {
 			if task.Due == nil {
 				return false
 			}
-			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, loc)
 			return taskDue.Equal(today)
 		}
 		if dueQuery == "yesterday" {
@@ -432,7 +434,7 @@ func (m Model) matchesSearch(task model.Task) bool {
 				return false
 			}
 			yesterday := today.AddDate(0, 0, -1)
-			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, loc)
 			return taskDue.Equal(yesterday)
 		}
 		if dueQuery == "tomorrow" {
@@ -440,14 +442,14 @@ func (m Model) matchesSearch(task model.Task) bool {
 				return false
 			}
 			tomorrow := today.AddDate(0, 0, 1)
-			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, loc)
 			return taskDue.Equal(tomorrow)
 		}
 		if dueQuery == "overdue" {
 			if task.Due == nil {
 				return false
 			}
-			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+			taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, loc)
 			return taskDue.Before(today)
 		}
 
@@ -456,12 +458,13 @@ func (m Model) matchesSearch(task model.Task) bool {
 			return false
 		}
 
-		taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, time.UTC)
+		taskDue := time.Date(task.Due.Year(), task.Due.Month(), task.Due.Day(), 0, 0, 0, 0, loc)
 
 		// Check for comparison operators
 		if strings.HasPrefix(dueQuery, "<=") {
 			dateStr := strings.TrimPrefix(dueQuery, "<=")
 			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				queryDate = time.Date(queryDate.Year(), queryDate.Month(), queryDate.Day(), 0, 0, 0, 0, loc)
 				return !taskDue.After(queryDate)
 			}
 			return false
@@ -469,6 +472,7 @@ func (m Model) matchesSearch(task model.Task) bool {
 		if strings.HasPrefix(dueQuery, ">=") {
 			dateStr := strings.TrimPrefix(dueQuery, ">=")
 			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				queryDate = time.Date(queryDate.Year(), queryDate.Month(), queryDate.Day(), 0, 0, 0, 0, loc)
 				return !taskDue.Before(queryDate)
 			}
 			return false
@@ -476,6 +480,7 @@ func (m Model) matchesSearch(task model.Task) bool {
 		if strings.HasPrefix(dueQuery, "<") {
 			dateStr := strings.TrimPrefix(dueQuery, "<")
 			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				queryDate = time.Date(queryDate.Year(), queryDate.Month(), queryDate.Day(), 0, 0, 0, 0, loc)
 				return taskDue.Before(queryDate)
 			}
 			return false
@@ -483,6 +488,7 @@ func (m Model) matchesSearch(task model.Task) bool {
 		if strings.HasPrefix(dueQuery, ">") {
 			dateStr := strings.TrimPrefix(dueQuery, ">")
 			if queryDate, err := time.Parse("2006-01-02", dateStr); err == nil {
+				queryDate = time.Date(queryDate.Year(), queryDate.Month(), queryDate.Day(), 0, 0, 0, 0, loc)
 				return taskDue.After(queryDate)
 			}
 			return false
