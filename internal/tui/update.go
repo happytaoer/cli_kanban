@@ -222,6 +222,12 @@ func (m Model) handleBoardKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				textareaWidth = 40
 			}
 			m.textArea.SetWidth(textareaWidth)
+			// Expand textarea height based on available screen height
+			availableHeight := m.height - 8 // title, info, spacing
+			if availableHeight < 6 {
+				availableHeight = 6
+			}
+			m.textArea.SetHeight(availableHeight)
 			m.textArea.SetValue(task.Description)
 			m.textArea.Focus()
 		}
