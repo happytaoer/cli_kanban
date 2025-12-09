@@ -163,7 +163,16 @@ func (m Model) viewBoard() string {
 func (m Model) renderStats() string {
 	var parts []string
 	for _, col := range m.columns {
-		count := len(col.Tasks)
+		count := 0
+		if m.searchQuery == "" {
+			count = len(col.Tasks)
+		} else {
+			for _, task := range col.Tasks {
+				if m.matchesSearch(task) {
+					count++
+				}
+			}
+		}
 		parts = append(parts, fmt.Sprintf("%s: %d", col.Name, count))
 	}
 	statsText := strings.Join(parts, " | ")
